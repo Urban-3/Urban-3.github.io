@@ -5,37 +5,8 @@ permalink: /about/
 ---
 
 
-**Expertise**
-- Community Health Improvement
-- Zoning and Land Use Economics
-- Complex Data Analysis & Visualization
-- Public Open Space Design & Engineering
-- Sport & Cultural Tourism Planning
-- Redevelopment and Land Remediation
-- Traditional Economic Development
-- Low Impact Development
-- Grant Writing/ RFP Solicitation
-- Public-Private Partnerships
-- Project and Construction Management
-- Municipal Procurement & Contracting
-- Technical Communication
+**Urban3 takes a different approach to land value economics, property and retail tax analysis and community design.** We empower communities with new insights into their own data. Our work makes a quantifiable case for better city planning, urban design and smarter growth. And we back up our stories with research and numbers.
 
-**Project Management**
-- Strategic Planning
-- Budget, Talent, Timeline and Contract Management
-- Procurement
+**We make the complex human.** We demystify tax codes, government jargon, and municipal finance data, allowing communities to clearly understand the economic impact of development.
 
-**Research Methods**
-- Demography
-- Multivariate Statistics
-- Community Health Needs and Health Impact Assessment
-- Built Environment Assessment/ Audits
-
-**Computer**
-- ArcGIS Suite
-- Microsoft Office
-- R
-- SPSS
-- Tableau
-
-![About](https://orryanb.github.io/photos/About.png)
+![About](https://Urban-3.github.io/photos/AukCoverImage.png)
