@@ -18,14 +18,14 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Ori Baber, PhD
-email: ori.baber@gmail.com
+title: Urban 3
+email: info@urban-three.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Exploring the world with data, maps and a good pair of hiking boots.
+  By mapping the financial health of built environments, we show communities the true value of good design.
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "https://orryanb.github.io" # the base hostname & protocol for your site, e.g. http://example.com
-twitter_username: ORRYANB
-github_username:  ORRYANB
+url: "https://Urban-3.github.io" # the base hostname & protocol for your site, e.g. http://example.com
+twitter_username: Urban3
+github_username:  Urban-3
 
 # Build settings
 theme: minima
