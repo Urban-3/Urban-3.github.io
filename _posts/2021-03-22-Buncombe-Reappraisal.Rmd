@@ -1,0 +1,462 @@
+---
+title: "Buncombe Reappraisal"
+output: github_document
+layout: post
+---
+
+## Step 1: Retrieve Data
+
+This project uses data accessible from the Buncombe County Open Data Explorer via GeoJSON API. The following data tables were retrieved using the R Code below:
+
+- **Buncombe County Property Sales Data**: At the time the data were retrieved, this table has 309,144 records with attributes on the sales status, amount, and grantor/ grantee for all real property sales in County
+- **All Property Bills from 2017**: 137,940 records with attributes on the ownership, values, amounts, and billing information for all real property tax bills in 2017
+- **Buncombe County Parcel Snapshot from 2017**: 124,117 records with attributes on the ownership, value and geography of all parcels in 2017
+- **Real Estate Appraisal Residential Building 2017**: 110,101 records with attributes on the size, value, and status of residential buildings
+- **Current Parcel Snapshot**: 129,347 records with attributes on the ownership, value and geography of all parcels in 2021
+
+```{r setup, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+require(ggplot2)
+require(stringr)
+require(httr)
+require(dplyr)
+require(jsonlite)
+require(tidyr)
+```
+
+```{r collect, eval=FALSE}
+sales_data<-fromJSON("https://opendata.arcgis.com/datasets/f4927ecad72b46b1b3ff5e27e45889e1_0.geojson", simplifyVector = TRUE)
+taxbill2017<-fromJSON("https://opendata.arcgis.com/datasets/e7aecb56d3524f1bb3685b811c04c7ad_0.geojson", simplifyVector = TRUE)
+parcel_snapshot_2017<-fromJSON("https://opendata.arcgis.com/datasets/b4a38f6d807247f8bedf16ae2989915f_9.geojson",simplifyVector = TRUE)
+residential_2017<-fromJSON("https://opendata.arcgis.com/datasets/08aaa5796f41479a8f805ff7291dafa2_0.geojson", simplifyVector = TRUE)
+parcel_snapshot_current<-fromJSON("https://opendata.arcgis.com/datasets/969e8c8088a34464961d227d8b1c3f38_1.geojson", simplifyVector = TRUE)
+```
+
+```{r ,eval=FALSE, echo=FALSE, message=FALSE, results=FALSE}
+sales_data_features<-rbind.data.frame(sales_data$features)
+sales_data_properties<-rbind.data.frame(sales_data_features$properties)
+taxbill2017_features<-rbind.data.frame(taxbill2017$features)
+taxbill2017_properties<-rbind.data.frame(taxbill2017_features$properties)
+residential_2017_features<-rbind.data.frame(residential_2017$features)
+residential_2017_properties<-rbind.data.frame(residential_2017_features$properties)
+land_use_codes_2017_features<-rbind.data.frame(land_use_codes_2017$features)
+land_use_codes_2017_properties<-rbind.data.frame(land_use_codes_2017_features$properties)
+parcel_snapshot_2017_features<-rbind.data.frame(parcel_snapshot_2017$features)
+parcel_snapshot_2017_properties<-rbind.data.frame(parcel_snapshot_2017_features$properties)
+parcel_snapshot_current_features<-rbind.data.frame(parcel_snapshot_current$features)
+parcel_snapshot_current_properties<-rbind.data.frame(parcel_snapshot_current_features$properties)
+
+write.csv(sales_data_properties, "D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\sales_data_properties.csv")
+write.csv(taxbill2017_properties, "D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\taxbill2017_properties.csv")
+write.csv(residential_2017_properties, "D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\residential_2017_properties.csv")
+write.csv(parcel_snapshot_2017_properties, "D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\parcel_snapshot_2017_properties.csv")
+write.csv(parcel_snapshot_current_properties, "D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\parcel_snapshot_current_properties.csv")
+
+```
+
+```{r eval=TRUE, echo=FALSE}
+sales_data_table<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\sales_data_properties.csv", header=TRUE)
+taxbill2017_table<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\taxbill2017_properties.csv", header=TRUE)
+residential2017_table<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\residential_2017_properties.csv", header=TRUE)
+parcelsnapshot2017_table<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\parcel_snapshot_2017_properties.csv", header=TRUE)
+parcelsnapshot2021_table<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\parcel_snapshot_current_properties.csv", header=TRUE)
+appraisal_history_2017<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\Real_Estate_Appraisal_History_2017.csv", header=TRUE)
+```
+## Step 2: Clean and Compile the Data
+
+### Real Property Sales Data
+
+This data table maintains records on the sale of each real property transacted the county. If a property has been sold/ changed ownership more than once, multiple records for the same property appear in the table. For this project, we are primarily interested in the most recent sales information for any given property. This data table includes a sequential 'Sell Number' field. We use this field to select the record with the highest absolute Sell Number value (i.e. the most recent). Alternatively, it would be possible to select the record with the most recent transaction date. We also select qualified sales only (other transactions, including exchanges among family, do not reflect market conditions and are therefore excluded) 
+
+```{r, eval=TRUE, message=FALSE, results=FALSE}
+#Extract the year from the data field
+sales_year<-as.data.frame(sapply(strsplit(sales_data_table$SellDate, "-"), `[`,1))
+names(sales_year)<-c("SALES_YEAR")
+sales_data_table<-cbind(sales_data_table, sales_year)
+sales_data_table$PIN<-str_replace_all(sales_data_table$PINN, "-", "")
+sales_data_table$SALES_YEAR<-as.numeric(sales_data_table$SALES_YEAR)
+
+#Extract the most recent sale record
+sales_data_table_year<-sales_data_table %>% 
+  filter(QualifiedSale=='Y')  %>% #Select qualified sales only
+  group_by(PINN) %>% #Group by parcel ID
+  top_n(1, abs(SellNo)) #Select the parcel ID with the highest sequential sell number
+```
+
+### Residential Features 2017 Data Table
+This table maintains records on the square footage, building materials, unique features, age, condition and value of residential buildings in Buncombe County. Each record in the table is a unique building. If a parcel has multiple buildings on the lot, then each building receives its own record and the parcel ID is duplicated. Therefore, we aggregate the data by Parcel ID to determine a sum total for each of the residential building characteristics, including finished sq ft, year built, and number of bedrooms and bathrooms.  
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE, results=FALSE}
+library(dplyr)
+names(residential2017_table)
+residential2017_table$BldgValue<-as.numeric(residential2017_table$BldgValue)
+residential2017_table_dup<-residential2017_table %>%
+  select(PIN,BldgNo,Style,SqFeet,FinishedSqFt,YearBuilt,Grade,Condition,Foundation,RoofType,Hvac,FullBath,
+         HalfBath,AdditionalPlumbingFixtures,Fireplace,SpecialFeature,Bedroom,BasementGarageDoors,
+         IndoorPool,ExtraKitchens,Elevator,BldgValue) %>%
+  distinct(PIN, BldgNo, BldgValue, .keep_all = TRUE)
+
+residential2017_table_dissolve1<-residential2017_table_dup %>%
+  group_by(PIN) %>% #Group by Parcel ID
+  summarize(SqFeet = sum(SqFeet), #Sum building features
+            FinishedSqFt = sum(FinishedSqFt),
+            FullBath=sum(FullBath),
+            HalfBath=sum(HalfBath),
+            Bedroom=sum(Bedroom),
+            BldgValue=sum(BldgValue))
+
+residential2017_table_dissolve2<-residential2017_table_dup %>%
+            group_by(PIN) %>%
+            top_n(1, abs(FinishedSqFt)) %>% #Select the features associated with the principal building
+            select(PIN, YearBuilt, Grade, Condition)
+residential2017_table_dissolve2$dup<-duplicated(residential2017_table_dissolve2$PIN)
+
+residential2017_table_dissolve2<-residential2017_table_dissolve2 %>%
+  filter(dup=='FALSE')
+
+residential2017_table_dissolve<-merge(residential2017_table_dissolve1, residential2017_table_dissolve2, by="PIN")   #Merge together building features         
+residential2017_table_dissolve$bldval_sqft<-residential2017_table_dissolve$BldgValue/residential2017_table_dissolve$SqFeet #Calculate building value per total building sq ft
+residential2017_table_dissolve$bldval_finishsqft<-residential2017_table_dissolve$BldgValue/residential2017_table_dissolve$FinishedSqFt #Calculate building value per finished building sq ft
+
+##Merge Sales and Residential 2017
+residential2017_sales<-merge(parcelsnapshot2017_table, sales_data_table_year, by="PIN", all.x=TRUE)
+length(unique(residential2017_sales$PINN))
+names(residential2017_sales)
+
+##Add residential features fields
+residential2017_sales_features<-merge(residential2017_sales, residential2017_table_dissolve, by="PIN", all.x=TRUE)
+length(unique(residential2017_sales_features$OBJECTID))
+names(residential2017_sales_features)
+```
+
+### Tax Bill data for 2017
+This table maintains records for the total real property (and personal property) tax bills for all parcels within the County. For this analysis, we only select records for real property. The total tax bill amount reflects all taxes levied by the various taxing authorities throughout the County, including the County, municipalities, and school district. 
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
+##Add Tax bill fields
+taxbill2017_table$PIN<-str_replace_all(taxbill2017_table$pin, "-", "")
+taxbill2017_table$dup<-duplicated(taxbill2017_table$PIN)
+
+taxbill2017_table_abbr<-taxbill2017_table %>%
+  filter(real_value>0 | personal_value==0) %>%
+  filter(PIN !="") %>%
+  filter(dup == 'FALSE') %>%
+  select(PIN, tax_due)
+residential2017_sales_bill<-merge(residential2017_sales_features, taxbill2017_table_abbr, by="PIN", all.x=TRUE)
+```
+
+
+## Step 3: Calculate Sales Ratio and Effective Tax Rate
+### Sales Ratio 
+One indicator used to evaluated regressivity in property tax assessment is the Sales Ratio, i.e. the assessed value of a home divided by its actual selling price. Homes that are assessed at  values higher than their respective sales price have a Sales Ratio greater than 1 and vice versa. If all homes are appraised at the same rate (regardless of the value of the home), then all homes should have the same Sales Ratio. If homes of lower value have Sales Ratios greater than more valuable homes, this is an indication regressivity.
+
+### Effective Tax Rate
+The effective tax rate is the amount of total property taxes paid divided by the home's selling price.
+
+```{r, eval=TRUE, message=FALSE}
+residential2017_sales_bill$sales_ratio<-residential2017_sales_bill$TaxValue/residential2017_sales_bill$SellingPrice
+residential2017_sales_bill$effective_tax_rate<-as.numeric(residential2017_sales_bill$tax_due)/residential2017_sales_bill$SellingPrice
+
+##Select Records with Complete Data
+residential2017_sales_bill_select<-residential2017_sales_bill%>%
+  filter(SellingPrice>10000 & TaxValue>0)%>%
+  filter(VacantLot =='N' | Class.y=='RES') %>%
+  filter(SALES_YEAR %in% (2013:2017))%>%
+  filter(SALES_YEAR>YearBuilt)%>%
+  select(PIN, SellingPrice, SALES_YEAR, TaxValue, effective_tax_rate, sales_ratio, PINN)
+```
+
+## Figure 1: Sale Ratio - Total Data 2017
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+ggplot(residential2017_sales_bill_select, aes(SellingPrice, sales_ratio))+
+  geom_point()+
+  stat_smooth()+
+  xlab("Sale Price") + 
+  ylab("Sales Ratio") +
+  ylim(0,4)+
+  scale_x_continuous(labels=scales::dollar_format(), limits =c(0,2000000))+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+```
+
+## Figure 2: Effective Tax Rate - Total Data 2017
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+ggplot(residential2017_sales_bill_select, aes(SellingPrice, effective_tax_rate))+
+                    geom_point()+
+                    stat_smooth()+
+  xlab("Sale Price") + 
+  ylab("Effective Tax Rate") +
+  ylim(0,0.04)+
+  scale_x_continuous(labels=scales::dollar_format(), limits =c(0,2000000))+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+```
+
+## Step 4: Calculate Sales Price Deciles
+```{r, eval=TRUE, message=FALSE}
+residential2017_sales_bill_select<-residential2017_sales_bill_select %>%
+  mutate(selldecile = ntile(SellingPrice, 10))
+
+residential2017_sales_bill_select_decile<-residential2017_sales_bill_select %>%
+  group_by(selldecile) %>%
+  summarise(saleprice = mean(SellingPrice),
+         effective_tax_rate=mean(effective_tax_rate),
+         sales_ratio=mean(sales_ratio),
+         count=sum(n()))
+```
+
+## Figure 3: Sales Ratio (Deciles)
+```{r, eval=TRUE,echo=FALSE, message=FALSE}
+ggplot(residential2017_sales_bill_select_decile, aes(saleprice, sales_ratio))+
+  geom_line()+
+  geom_point()+
+  xlab("Sale Price") + 
+  ylab("Sales Ratio") +
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+
+```
+
+## Figure 4: Effective Tax Rate by Sale Price (Deciles)
+```{r, eval=TRUE,echo=FALSE, message=FALSE}
+ggplot(residential2017_sales_bill_select_decile, aes(saleprice, effective_tax_rate))+
+  geom_line()+
+  geom_point()+
+  xlab("Sale Price") + 
+  ylab("Effective Tax Rate") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+```
+
+## Step 5: Replicate with 2021 Reappraisal Data
+
+There are two important fields missing from the available data, that are required to replicate the 2017 finds: Year Built and Tax Bill for 2021. The year built is an important field because it helps to flag properties that have been substantially renovated between the date of sale and the appraisal. The renovations explain unusually high discrepancies in the sales ratio.
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+##Merge Sales and Residential 2021
+residential2021_sales<-merge(parcelsnapshot2021_table, sales_data_table_year, by="PIN", all.x=TRUE)
+length(unique(residential2021_sales$PINN))
+names(residential2017_sales)
+
+##Select Records with Complete Data
+residential2021_sales_select<-residential2021_sales%>%
+  filter(SellingPrice>10000 & TaxValue>0)%>%
+  filter(VacantLot =='N' | Class.y=='RES') %>%
+  filter(SALES_YEAR %in% (2018:2021))%>%
+  select(PIN, SellingPrice, SALES_YEAR, TaxValue, PINN)
+
+residential2021_sales_select$sales_ratio<-residential2021_sales_select$TaxValue/residential2021_sales_select$SellingPrice
+
+#Calculate deciles
+residential2021_sales_select<-residential2021_sales_select %>%
+  mutate(selldecile = ntile(SellingPrice, 10))
+
+residential2021_sales_select_decile<-residential2021_sales_select %>%
+  group_by(selldecile) %>%
+  mutate(saleprice = mean(SellingPrice),
+         sales_ratio=mean(sales_ratio))
+```
+
+## Figure 5: Sales Ratio - Total Data 2021
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+ggplot(residential2021_sales_select, aes(SellingPrice, sales_ratio))+
+  geom_point()+
+  stat_smooth()+
+  xlab("Sale Price") + 
+  ylab("Sales Ratio") +
+  ylim(0,4)+
+  scale_x_continuous(labels=scales::dollar_format(), limits =c(0,2000000))+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+```
+
+## Figure 6: Sales Ratio Decile 2021
+
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+ggplot(residential2021_sales_select_decile, aes(saleprice, sales_ratio))+
+  geom_line()+
+  geom_point()+
+  xlab("Sale Price") + 
+  ylab("Sales Ratio") +
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+
+```
+
+## Step 6: Merge 2017 and 2021 Appraisal Data
+```{r, eval=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+appraisal_history_2017_clean<-appraisal_history_2017 %>%
+  select(ï..PIN,Year,OwnerID,Acreage,LandValue,BuildingValue,ImprovementValue,ExemptionValue,DeferredValue,Exemption,TotalValue) %>%
+  distinct(ï..PIN,Year,OwnerID, .keep_all = TRUE)
+
+##Total Value
+appraisal_history_2017_clean$TotalValue<-appraisal_history_2017_clean$LandValue+appraisal_history_2017_clean$BuildingValue+appraisal_history_2017_clean$ImprovementValue
+appraisal_history_2017_wide_totval<-appraisal_history_2017_clean %>%
+  select(ï..PIN, Year, TotalValue) %>%
+  spread(Year, TotalValue)
+
+names(appraisal_history_2017_wide_totval)<-c("PIN","TV_1999","TV_2000","TV_2001","TV_2002","TV_2003",
+                                             "TV_2004","TV_2005","TV_2006","TV_2007","TV_2008","TV_2009",
+                                             "TV_2010","TV_2011","TV_2012","TV_2013","TV_2014","TV_2015",
+                                             "TV_2016","TV_2017","TV_2018")  
+ 
+##Land Value
+appraisal_history_2017_wide_landval<-appraisal_history_2017_clean %>%
+  select(ï..PIN, Year, LandValue) %>%
+  spread(Year, LandValue)
+names(appraisal_history_2017_wide_landval)<-c("PIN","LV_1999","LV_2000","LV_2001","LV_2002","LV_2003",
+                                             "LV_2004","LV_2005","LV_2006","LV_2007","LV_2008","LV_2009",
+                                             "LV_2010","LV_2011","LV_2012","LV_2013","LV_2014","LV_2015",
+                                             "LV_2016","LV_2017","LV_2018")
+appraisal_history_2017_wide_val<-merge(appraisal_history_2017_wide_totval, appraisal_history_2017_wide_landval, by="PIN")
+
+##Building Value
+appraisal_history_2017_wide_buildval<-appraisal_history_2017_clean %>%
+  select(ï..PIN, Year, BuildingValue) %>%
+  spread(Year, BuildingValue)
+names(appraisal_history_2017_wide_buildval)<-c("PIN","BV_1999","BV_2000","BV_2001","BV_2002","BV_2003",
+                                             "BV_2004","BV_2005","BV_2006","BV_2007","BV_2008","BV_2009",
+                                             "BV_2010","BV_2011","BV_2012","BV_2013","BV_2014","BV_2015",
+                                             "BV_2016","BV_2017","BV_2018")
+appraisal_history_2017_wide_val<-merge(appraisal_history_2017_wide_val, appraisal_history_2017_wide_buildval, by="PIN")
+names(appraisal_history_2017_wide_val)
+
+##Add 2021 Data
+appraisal_history_2017_snapshot2021<-merge(appraisal_history_2017_wide_val, parcelsnapshot2021_table, by="PIN", all.x=TRUE)
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021%>%
+  filter(Class %in% c('100', '180')) ##Include only SFR
+names(appraisal_history_2017_snapshot2021_s)
+
+##Change in Total Value
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dTV2005=ifelse(TV_2001!='NA', ((TV_2005-TV_2001)/TV_2001), 0))
+head(appraisal_history_2017_snapshot2021_s$dTV2005, 20)
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dTV2009=ifelse(TV_2005>0, ((TV_2009-TV_2005)/TV_2005), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dTV2013=ifelse(TV_2009>0, ((TV_2013-TV_2009)/TV_2009), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dTV2017=ifelse(TV_2013>0, ((TV_2017-TV_2013)/TV_2013), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dTV2021=ifelse(TV_2017>0, ((TaxValue-TV_2017)/TV_2017), 0))
+
+##Change in Land Value
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dLV2005=ifelse(LV_2001>0, ((LV_2005-LV_2001)/LV_2001), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dLV2009=ifelse(LV_2005>0, ((LV_2009-LV_2005)/LV_2005), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dLV2013=ifelse(LV_2009>0, ((LV_2013-LV_2009)/LV_2009), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dLV2017=ifelse(LV_2013>0, ((LV_2017-LV_2013)/LV_2013), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dLV2021=ifelse(LV_2017>0, ((LandValue-LV_2017)/LV_2017), 0))
+
+##Change in Building Value
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dBV2005=ifelse(BV_2001>0, ((BV_2005-BV_2001)/BV_2001), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dBV2009=ifelse(BV_2005>0, ((BV_2009-BV_2005)/BV_2005), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dBV2013=ifelse(BV_2009>0, ((BV_2013-BV_2009)/BV_2009), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dBV2017=ifelse(BV_2013>0, ((BV_2017-BV_2013)/BV_2013), 0))
+
+appraisal_history_2017_snapshot2021_s<-appraisal_history_2017_snapshot2021_s%>%
+  mutate(dBV2021=ifelse(BV_2017>0, ((BuildingValue-BV_2017)/BV_2017), 0))
+
+names(appraisal_history_2017_snapshot2021_s)
+ggplot(appraisal_history_2017_snapshot2021_s, aes(LandValue, dLV2021))+
+  geom_point()+
+  stat_smooth()+
+  xlab("Sale Price") + 
+  ylab("Sales Ratio") +
+  ylim(0,5)+
+  scale_x_continuous(labels=scales::dollar_format(), limits =c(0,2000000))+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+
+appraisal_history_2017_snapshot2021_s$index<-1
+appraisal_history_2017_snapshot2021_s_neigh<-appraisal_history_2017_snapshot2021_s %>%
+  filter(dLV2021>0, dLV2021<4) %>%
+  group_by(NeighborhoodCode) %>%
+  summarise(Avg_TotVal= mean(TaxValue),
+         Avg_BuildVal=mean(BuildingValue),
+         Avg_LandVal=mean(LandValue),
+         Avg_dTV=mean(dTV2021),
+         Avg_dBV=mean(dBV2021),
+         Avg_dLV=mean(dLV2021),
+         Count=sum(index))%>%
+  filter(Count>15)
+
+ggplot(appraisal_history_2017_snapshot2021_s_neigh, aes(Avg_BuildVal, Avg_dBV))+
+  geom_point()+
+  stat_smooth()+
+  xlab("Sale Price") + 
+  ylab("Sales Ratio") +
+  ylim(0,5)+
+  scale_x_continuous(labels=scales::dollar_format(), limits =c(0,2000000))+
+  theme(panel.grid = element_blank(),
+        axis.line = element_line("grey"),
+        panel.grid.major.y = element_line("grey"),
+        panel.background = element_blank(),
+        plot.background = element_blank(),
+        panel.border = element_blank(),
+        axis.title.y = element_text(angle = 0))
+
+```
+
+```{r, eval=TRUE,echo=FALSE, message=FALSE}
+write.csv(residential2017_sales_bill_select, file="D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\residential2017_sales_bill_select.csv")
+write.csv(residential2017_table_dissolve, file="D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\residential2017_table_dissolve.csv")
+write.csv(appraisal_history_2017_snapshot2021_s, file="D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\appraisal_history_2017_snapshot2021_s.csv")
+```
