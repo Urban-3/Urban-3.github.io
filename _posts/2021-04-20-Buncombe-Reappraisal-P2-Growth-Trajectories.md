@@ -227,8 +227,7 @@ appraisal_history2019_21_full_wneigh_s<-appraisal_history2019_21_full_wneigh%>%
 #### Figure 9: Percent change in LAND value from 2001– comparisons between municipalities
 
 ![](https://github.com/Urban-3/Urban-3.github.io/blob/main/_posts/assets/2021-04-20-Buncombe-Reappraisal-P2-Growth-Trajectories_files/figure-gfm/unnamed-chunk-12-1.png<!-- -->
-# Comparing growth trajectories of homes in different neighborhoods in
-Asheville
+# Comparing growth trajectories of homes in different neighborhoods in Asheville
 
 ``` r
 ##Calculate average percent change by neighborhood
