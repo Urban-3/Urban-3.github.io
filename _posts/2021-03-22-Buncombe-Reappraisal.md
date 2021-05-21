@@ -173,11 +173,11 @@ residential2017_sales_bill_select<-residential2017_sales_bill%>%
 
 ## Figure 1: Sale Ratio - Total Data 2017
 
-![](2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 ## Figure 2: Effective Tax Rate - Total Data 2017
 
-![](2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ## Step 4: Calculate Sales Price Deciles
 
@@ -195,8 +195,8 @@ residential2017_sales_bill_select_decile<-residential2017_sales_bill_select %>%
 
 ## Figure 3: Sales Ratio (Deciles)
 
-![](2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 ## Figure 4: Effective Tax Rate by Sale Price (Deciles)
 
-![](2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-03-22-Buncombe-Reappraisal_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
