@@ -71,7 +71,8 @@ ggplot(data = residential_sales_ratio, aes(saleprice, sales_ratio)) +
        subtitle = "2001 - 2021",
        y = "Averages Sales : Value Ratio", x = "Selling Price") + 
   scale_x_continuous(labels=scales::dollar_format())+
-  facet_wrap(~ SALES_YEAR)
+  facet_wrap(~ SALES_YEAR)+
+  theme(axis.text.x = element_text(angle = 90))
 ```
 
 ## Adding Condos, Townhomes to the Analysis
