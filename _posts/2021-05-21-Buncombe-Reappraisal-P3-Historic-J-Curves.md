@@ -64,7 +64,7 @@ residential_sales_ratio<-sales_appraised%>%
 
 ## Historic Sales Ratio (J-Curves) for Single Family Homes in Buncombe County
 
-![](https://github.com/Urban-3/Urban-3.github.io/edit/main/_posts/assets/2021-05-21-Buncombe-Reappraisal-P3-Historic-J-Curves_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+![](https://github.com/Urban-3/Urban-3.github.io/_posts/assets/2021-05-21-Buncombe-Reappraisal-P3-Historic-J-Curves_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
 ## Adding Condos, Townhomes to the Analysis
 
