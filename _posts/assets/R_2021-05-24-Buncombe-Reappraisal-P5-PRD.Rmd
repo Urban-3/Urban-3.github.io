@@ -1,0 +1,106 @@
+---
+output: github_document
+layout: post
+---
+
+```{r setup, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, results=FALSE}
+require(ggplot2)
+require(stringr)
+require(httr)
+require(dplyr)
+require(jsonlite)
+require(tidyr)
+library(gt)
+library(tidyverse)
+library(glue)
+
+appraisal_history2019<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\Real_Estate_Appraisal_Tax_History_2019.csv", header=TRUE)
+sales_data_table<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\sales_data_properties.csv", header=TRUE)
+```
+
+## Introduction
+
+### Price Related Differential
+
+IAAO definitation: Price-related differential. The mean (sales ratio) divided by the weighted mean (sales ratio). The statistic has a slight bias upward. Price-related differentials above 1.03 tend to indicate assessment regressivity; price-related differentials below 0.98 tend to indicate assessment progressivity
+
+Fair & Equitable 2011: 
+
+- "There is a bias in the measure such that PRD in the general range of 0.9 and 1.1 are inconclusive indicator of assessment regressivity (IAAO, 1980, 14)"
+- "The 1990 Standard on Ratio Studies (IAAO 1990, 24-25) set forth a standard for PRD of 0.98 to 1.03"
+- "The price-related differential (PRD) and weighted mean are sensitive to sales with high prices even if the ratios on higher priced sales do not appear unusual relative to other sales"
+
+At best, PRD is 'an easy to calculate measure that provides "some notion of any association" between assessment ratios and property value. 
+
+### Coefficient of Dispersion
+Less than 15 for residential properties
+
+## Calculating Indicators of Vertical Equity
+```{r, eval=TRUE, message=FALSE, warning=FALSE, results=FALSE}
+appraisal_history2019$totalvalue<-appraisal_history2019$LandVal+appraisal_history2019$BldgVal+appraisal_history2019$ImprVal ##Calculate total taxable value
+appraisal_history2019_abbr<-appraisal_history2019 %>%
+  distinct(ï..PIN,TaxYear, .keep_all = TRUE) %>% #The data set includes duplicated records. Remove duplicates.
+  mutate(PIN=ï..PIN, #recode variable names
+         year=TaxYear,
+         landvalue=LandVal)%>%
+  select(PIN, year, landvalue, totalvalue)
+appraisal_history2019_abbr$PIN_YEAR=paste(appraisal_history2019_abbr$PIN, appraisal_history2019_abbr$year, sep="_")
+
+#Extract the year from the data field
+sales_year<-as.data.frame(sapply(strsplit(sales_data_table$SellDate, "-"), `[`,1))
+names(sales_year)<-c("SALES_YEAR")
+sales_data_table<-cbind(sales_data_table, sales_year)
+sales_data_table$PIN<-str_replace_all(sales_data_table$PINN, "-", "")
+sales_data_table$SALES_YEAR<-as.numeric(sales_data_table$SALES_YEAR)
+
+#Extract the most recent sale record
+sales_data_table_year<-sales_data_table %>% 
+  filter(QualifiedSale=='Y')  %>% #Select qualified sales only
+  filter(SALES_YEAR>2000)%>% #Filter sales only after 2000, since we only have appraisal values back to 2001
+  filter(VacantLot=="False")%>%
+  filter(SellingPrice>10000)%>%
+  mutate(SALES_YEAR_1=(SALES_YEAR+1))%>% #Create a new date field that allows the sales to align with the following tax year
+  select(PIN, SellingPrice, City, Subdivision, Class, SALES_YEAR, SALES_YEAR_1)
+sales_data_table_year$PIN_YEAR=paste(sales_data_table_year$PIN, sales_data_table_year$SALES_YEAR_1, sep="_")
+
+sales_appraised<-merge(appraisal_history2019_abbr, sales_data_table_year, by="PIN_YEAR")
+sales_appraised$sales_ratio<-sales_appraised$totalvalue/sales_appraised$SellingPrice
+
+sales_ratio<-sales_appraised%>%
+  filter(Class=="RES")%>%
+  group_by(SALES_YEAR)%>%
+  mutate(selldecile = ntile(SellingPrice, 10),
+         mean_ratio = mean(sales_ratio),
+         median_ratio = median(sales_ratio),
+         weighted_mean = sum(totalvalue)/sum(SellingPrice),
+         ratio_std = sd(sales_ratio),
+         index = 1,
+         count = sum(index),
+         median_diff=(sales_ratio-median_ratio),
+         coeff_dispersion = (100/count)*(sum(abs(median_diff))/median_ratio),
+         coeff_variation = ((100*ratio_std)/mean_ratio),
+         price_rltd_diff = (mean_ratio/weighted_mean),
+         Year = first(SALES_YEAR))
+
+sales_ratio_summary<-sales_ratio%>%
+  group_by(Year)%>%
+  summarise(`Mean Ratio` = first(mean_ratio),
+            `Meadian Ratio` = first(median_ratio),
+            `Coeff. of Dispersion` = first(coeff_dispersion),
+            `Coeff. of Variation` = first(coeff_variation),
+            `Price Related Differential` = first(price_rltd_diff),
+            `Transactions`=sum(index))
+```
+
+## Table 1
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+sales_ratio_summary %>%
+  arrange(Year) %>%
+  gt() %>%
+  tab_header(
+    title = "Indicators of Vertical Equity",
+    subtitle = "Buncombe County, North Carolina")%>%
+  fmt_number(columns = 2:6,
+             decimals=2)
+```
+```
