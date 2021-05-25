@@ -167,11 +167,11 @@ appraisal_history2019_21_full_s$Quintile<-as.factor(appraisal_history2019_21_ful
 
 #### Figure 4: Change in TOTAL taxable value – comparisons across home value
 
-![](https://github.com/Urban-3/Urban-3.github.io/blob/main/_posts/assets/2021-04-20-Buncombe-Reappraisal-P2-Growth-Trajectories_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-04-20-Buncombe-Reappraisal-P2-Growth-Trajectories_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 #### Figure 5: Percent change in TOTAL taxable value from 2001– comparisons across home value
 
-![](https://github.com/Urban-3/Urban-3.github.io/blob/main/_posts/assets/2021-04-20-Buncombe-Reappraisal-P2-Growth-Trajectories_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-04-20-Buncombe-Reappraisal-P2-Growth-Trajectories_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 #### Figure 6: Percent change in LAND value from 2001– comparisons across home value
 
