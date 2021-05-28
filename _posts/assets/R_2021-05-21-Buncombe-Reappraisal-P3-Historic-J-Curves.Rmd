@@ -51,53 +51,77 @@ sales_appraised<-merge(appraisal_history2019_abbr, sales_data_table_year, by="PI
 sales_appraised$sales_ratio<-sales_appraised$totalvalue/sales_appraised$SellingPrice
 
 residential_sales_ratio<-sales_appraised%>%
-  filter(Class=="RES")%>%
-  group_by(SALES_YEAR)%>%
-  mutate(selldecile = ntile(SellingPrice, 10))%>%
+  filter(Class %in% c("RES"))%>%
+  group_by(SALES_YEAR_1)%>%
+  mutate(selldecile = ntile(SellingPrice, 10),
+         mean_year_ratio=mean(sales_ratio),
+         median_year_ratio=median(sales_ratio),
+         mean_selling_price=mean(SellingPrice),
+         median_selling_price=median(SellingPrice),
+         mean_total_value=mean(totalvalue),
+         median_total_value=median(totalvalue))%>%
   ungroup()%>%
-  group_by(selldecile, SALES_YEAR) %>%
+  group_by(selldecile, SALES_YEAR_1) %>%
   summarise(saleprice = mean(SellingPrice),
             sales_ratio=mean(sales_ratio),
             appraised_value=mean(totalvalue),
-            count=sum(n()))
+            count=sum(n()),
+            mean_year_ratio = first(mean_year_ratio),
+            median_year_ratio = first(median_year_ratio),
+            mean_selling_price=first(mean_selling_price),
+            median_selling_price=first(median_selling_price),
+            mean_total_value=first(mean_total_value),
+            median_total_value=first(median_total_value))
 ```
 
 ## Historic Sales Ratio (J-Curves) for Single Family Homes in Buncombe County
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(data = residential_sales_ratio, aes(saleprice, sales_ratio)) +
-  geom_line(color = "steelblue", size = 1) +
-  geom_point(color="steelblue") + 
+  geom_line(color = "steelblue", size = 0.5) +
+  geom_point(color="steelblue", size= 0.5) + 
   labs(title = "Average Sales-to-Appraised-Value Ratios (SFR)",
        subtitle = "2001 - 2021",
        y = "Averages Sales : Value Ratio", x = "Selling Price") + 
   scale_x_continuous(labels=scales::dollar_format())+
-  facet_wrap(~ SALES_YEAR)+
+  facet_wrap(~ SALES_YEAR_1)+
   theme(axis.text.x = element_text(angle = 90))
 ```
 
 ## Adding Condos, Townhomes to the Analysis
 ```{r, eval=TRUE, message=FALSE, warning=FALSE, results=FALSE}
-residential_all_sales_ratio<-sales_appraised%>%
+residential_sales_all_ratio<-sales_appraised%>%
   filter(Class %in% c("RES","TOWNHOME","MULTIPLE R"," CONDO"))%>%
-  group_by(SALES_YEAR)%>%
-  mutate(selldecile = ntile(SellingPrice, 10))%>%
+  group_by(SALES_YEAR_1)%>%
+  mutate(selldecile = ntile(SellingPrice, 10),
+         mean_year_ratio=mean(sales_ratio),
+         median_year_ratio=median(sales_ratio),
+         mean_selling_price=mean(SellingPrice),
+         median_selling_price=median(SellingPrice),
+         mean_total_value=mean(totalvalue),
+         median_total_value=median(totalvalue))%>%
   ungroup()%>%
-  group_by(selldecile, SALES_YEAR) %>%
+  group_by(selldecile, SALES_YEAR_1) %>%
   summarise(saleprice = mean(SellingPrice),
-            sales_ratio = mean(sales_ratio),
-            appraised_value = mean(totalvalue),
-            count=sum(n()))
+            sales_ratio=mean(sales_ratio),
+            appraised_value=mean(totalvalue),
+            count=sum(n()),
+            mean_year_ratio = first(mean_year_ratio),
+            median_year_ratio = first(median_year_ratio),
+            mean_selling_price=first(mean_selling_price),
+            median_selling_price=first(median_selling_price),
+            mean_total_value=first(mean_total_value),
+            median_total_value=first(median_total_value))
 ```
 
 ## Historic Sales Ratio (J-Curves) for Single Family Homes, Condos and Townhomes in Buncombe County
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(data = residential_all_sales_ratio, aes(saleprice, sales_ratio)) +
-  geom_line(color = "steelblue", size = 1) +
-  geom_point(color="steelblue") + 
-  labs(title = "Average Sales-to-Appraised-Value Ratios (SFR, Condo, Townhome)",
+ggplot(data = residential_sales_all_ratio, aes(saleprice, sales_ratio)) +
+  geom_line(color = "steelblue", size = 0.5) +
+  geom_point(color="steelblue", size= 0.5) + 
+  labs(title = "Average Sales-to-Appraised-Value Ratios (SFR)",
        subtitle = "2001 - 2021",
        y = "Averages Sales : Value Ratio", x = "Selling Price") + 
   scale_x_continuous(labels=scales::dollar_format())+
-  facet_wrap(~ SALES_YEAR)+
+  facet_wrap(~ SALES_YEAR_1)+
   theme(axis.text.x = element_text(angle = 90))
 ```

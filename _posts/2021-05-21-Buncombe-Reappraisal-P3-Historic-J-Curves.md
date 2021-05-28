@@ -51,36 +51,60 @@ sales_appraised<-merge(appraisal_history2019_abbr, sales_data_table_year, by="PI
 sales_appraised$sales_ratio<-sales_appraised$totalvalue/sales_appraised$SellingPrice
 
 residential_sales_ratio<-sales_appraised%>%
-  filter(Class=="RES")%>%
-  group_by(SALES_YEAR)%>%
-  mutate(selldecile = ntile(SellingPrice, 10))%>%
+  filter(Class %in% c("RES"))%>%
+  group_by(SALES_YEAR_1)%>%
+  mutate(selldecile = ntile(SellingPrice, 10),
+         mean_year_ratio=mean(sales_ratio),
+         median_year_ratio=median(sales_ratio),
+         mean_selling_price=mean(SellingPrice),
+         median_selling_price=median(SellingPrice),
+         mean_total_value=mean(totalvalue),
+         median_total_value=median(totalvalue))%>%
   ungroup()%>%
-  group_by(selldecile, SALES_YEAR) %>%
+  group_by(selldecile, SALES_YEAR_1) %>%
   summarise(saleprice = mean(SellingPrice),
             sales_ratio=mean(sales_ratio),
             appraised_value=mean(totalvalue),
-            count=sum(n()))
+            count=sum(n()),
+            mean_year_ratio = first(mean_year_ratio),
+            median_year_ratio = first(median_year_ratio),
+            mean_selling_price=first(mean_selling_price),
+            median_selling_price=first(median_selling_price),
+            mean_total_value=first(mean_total_value),
+            median_total_value=first(median_total_value))
 ```
 
 ## Historic Sales Ratio (J-Curves) for Single Family Homes in Buncombe County
 
-![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-05-21-Buncombe-Reappraisal-P3-Historic-J-Curves_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+![](R_2021-05-21-Buncombe-Reappraisal-P3-Historic-J-Curves_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
 
 ## Adding Condos, Townhomes to the Analysis
 
 ``` r
-residential_all_sales_ratio<-sales_appraised%>%
+residential_sales_all_ratio<-sales_appraised%>%
   filter(Class %in% c("RES","TOWNHOME","MULTIPLE R"," CONDO"))%>%
-  group_by(SALES_YEAR)%>%
-  mutate(selldecile = ntile(SellingPrice, 10))%>%
+  group_by(SALES_YEAR_1)%>%
+  mutate(selldecile = ntile(SellingPrice, 10),
+         mean_year_ratio=mean(sales_ratio),
+         median_year_ratio=median(sales_ratio),
+         mean_selling_price=mean(SellingPrice),
+         median_selling_price=median(SellingPrice),
+         mean_total_value=mean(totalvalue),
+         median_total_value=median(totalvalue))%>%
   ungroup()%>%
-  group_by(selldecile, SALES_YEAR) %>%
+  group_by(selldecile, SALES_YEAR_1) %>%
   summarise(saleprice = mean(SellingPrice),
-            sales_ratio = mean(sales_ratio),
-            appraised_value = mean(totalvalue),
-            count=sum(n()))
+            sales_ratio=mean(sales_ratio),
+            appraised_value=mean(totalvalue),
+            count=sum(n()),
+            mean_year_ratio = first(mean_year_ratio),
+            median_year_ratio = first(median_year_ratio),
+            mean_selling_price=first(mean_selling_price),
+            median_selling_price=first(median_selling_price),
+            mean_total_value=first(mean_total_value),
+            median_total_value=first(median_total_value))
 ```
 
 ## Historic Sales Ratio (J-Curves) for Single Family Homes, Condos and Townhomes in Buncombe County
 
-![](https://raw.githubusercontent.com/Urban-3/Urban-3.github.io/main/_posts/assets/2021-05-21-Buncombe-Reappraisal-P3-Historic-J-Curves_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](R_2021-05-21-Buncombe-Reappraisal-P3-Historic-J-Curves_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
