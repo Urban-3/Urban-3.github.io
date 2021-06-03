@@ -30,6 +30,20 @@ taxable_value<-c(13777912,17095153,17496502,18034880,19105553,26181099,27258520,
 tax_collected<-c(93527086,108802529,113044025,116654786,123668417,152744354,157568418,162584050,165793158,167950517,169368975,171520939,192949306,191565661,196458687,201907004,216086991,221770248,231903837)
 
 buncombe_taxes<-as.data.frame(cbind(year, buncombe_rate, taxable_value, tax_collected))
+tax_collected_m<-buncombe_taxes$tax_collected/1000000
+taxable_value_b<-buncombe_taxes$taxable_value/1000000
+
+mycurrency <- function(x){
+  return(paste("$", formatC(as.numeric(x), format="f", digits=0, big.mark=",")))
+}
+
+mycurrency_M <- function(x){
+  return(paste("$", formatC(as.numeric(x), format="f", digits=0, big.mark=","),"M"))
+}
+
+mycurrency_B <- function(x){
+  return(paste("$", formatC(as.numeric(x), format="f", digits=0, big.mark=","),"B"))
+}
 
 font <- list(
   family = "Courier",
@@ -43,18 +57,40 @@ label <- list(
 )
 
 
-tax_rate_gg<-ggplot(data=buncombe_taxes, aes(year, buncombe_rate), text=paste("<b>Tax Rate:</b>", buncombe_rate))+
-  geom_line(color = "#5086C3")+
+tax_rate_gg<-ggplot(data=buncombe_taxes, aes(year, buncombe_rate, text=paste0("<b>Tax Rate: </b>", buncombe_rate, "<br><b>Year: </b>", year)))+
+  geom_line(group=1, color = "#5086C3", size=2)+
   ylim(c(0,1))+
-  labs(y = "Tax Rate per $100 assessed value", x = "Year")+
-  theme(axis.text.x = element_text(angle = 90))
+  labs(title="Tax Rate", y = "Tax Rate per $100 assessed value", x = "Year")+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())
 tax_rate_ggp<-ggplotly(tax_rate_gg, tooltip="text")%>%
   style(hoverlabel = label) %>%
   layout(font = "NimbusSan")
 tax_rate_ggp
 
-ggplot(data=buncombe_taxes, aes(year, taxable_value))+
-  geom_line(color = "steelblue")
+tax_collected_gg<-ggplot(data=buncombe_taxes, aes(year, tax_collected_m, text=paste0("<b>Property Tax Revenue: </b>", mycurrency_M(tax_collected_m), "<br><b>Year: </b>", year)))+
+  geom_line(group=1, color = "#5086C3", size=2)+
+  labs(title="Total Property Tax Revenue", y = "Property Tax Revenue", x = "Year")+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())+
+  scale_y_continuous(breaks=c(120, 160, 200),
+                     labels=c("$120 M", "$160 M", "$200 M"))
+tax_collected_ggp<-ggplotly(tax_collected_gg, tooltip="text")%>%
+  style(hoverlabel = label) %>%
+  layout(font = "NimbusSan")
+tax_collected_ggp
 
-ggplot(data=buncombe_taxes, aes(year, tax_collected))+
-  geom_line(color = "steelblue")
+tax_value_gg<-ggplot(data=buncombe_taxes, aes(year, taxable_value_b, text=paste0("<b>Total Taxable Value: </b>", mycurrency_B(taxable_value_b), "<br><b>Year: </b>", year)))+
+  geom_line(group=1, color = "#5086C3", size=2)+
+  labs(title="Total Taxable Value", y = "Total Taxable Value", x = "Year")+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())+
+  scale_y_continuous(breaks=c(20, 30, 40),
+                     labels=c("$20 M", "$30 M", "$40 M"))
+tax_value_ggp<-ggplotly(tax_value_gg, tooltip="text")%>%
+  style(hoverlabel = label) %>%
+  layout(font = "NimbusSan")
+tax_value_ggp
+
+subplot(tax_value_ggp, tax_rate_ggp,  style(tax_rate_ggp, title = TRUE), tax_collected_ggp, nrows=1, titleX = TRUE, titleY=TRUE)
+grid.arrange(tax_value_ggp, tax_rate_ggp, nrows=1)
