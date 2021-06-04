@@ -51,6 +51,10 @@ mycurrency <- function(x){
   return(paste("$", formatC(as.numeric(x), format="f", digits=0, big.mark=",")))
 }
 
+mypercent <- function(x){
+  return(paste(formatC(as.numeric(x), format="f", digits=0, big.mark=","),"%"))
+}
+
 mycurrency_M <- function(x){
   return(paste("$", formatC(as.numeric(x), format="f", digits=0, big.mark=","),"M"))
 }
@@ -64,17 +68,23 @@ font <- list(
   size = 15,
   color = "white"
 )
-label <- list(
-  bgcolor = "#001E60",
+
+tax_value_annotation_font <- list(
+  family = "Courier",
+  size = 20,
+  color = "white"
+)
+
+tax_value_label<- list(
+  bgcolor = "#000000",
   bordercolor = "transparent",
   font = font
 )
 
-
 tax_value_annotation <- list(
-  text = "<b>Total Taxable Value</b> multiplied by the",
-  font = "Courier",
-  size = 15,
+  text = "<b>Taxable Value</b>",
+  bgcolor = "#000000",
+  font = tax_value_annotation_font,
   xref = "paper",
   yref = "paper",
   yanchor = "bottom",
@@ -83,11 +93,24 @@ tax_value_annotation <- list(
   x = 0.5,
   y = 1,
   showarrow = FALSE
+)
+
+tax_rate_annotation_font <- list(
+  family = "Courier",
+  size = 20,
+  color = "white"
+)
+
+tax_rate_label <- list(
+  bgcolor = "#808080",
+  bordercolor = "transparent",
+  font = font
 )
 
 tax_rate_annotation <- list(
-  text = "<b>Tax Rate</b> equals the",
-  font = "Courier",
+  text = "<b>Tax Rate</b>",
+  font = tax_rate_annotation_font,
+  bgcolor = "#808080",
   xref = "paper",
   yref = "paper",
   yanchor = "bottom",
@@ -96,11 +119,24 @@ tax_rate_annotation <- list(
   x = 0.5,
   y = 1,
   showarrow = FALSE
+)
+
+tax_revenue_annotation_font <- list(
+  family = "Courier",
+  size = 20,
+  color = "white"
+)
+
+tax_revenue_label<- list(
+  bgcolor = "#5086C3",
+  bordercolor = "transparent",
+  font = font
 )
 
 tax_revenue_annotation <- list(
-  text = "<b>Total Property Tax Revenue</b>",
-  font = "Courier",
+  text = "<b>Tax Revenue</b>",
+  font = tax_revenue_annotation_font,
+  bgcolor = "#5086C3",
   xref = "paper",
   yref = "paper",
   yanchor = "bottom",
@@ -111,16 +147,29 @@ tax_revenue_annotation <- list(
   showarrow = FALSE
 )
 
+
+tax_value_gg<-ggplot(data=buncombe_taxes, aes(year, taxable_value_b, text=paste0("<b>Total Taxable Value: </b>", mycurrency_B(taxable_value_b), "<br><b>Year: </b>", year)))+
+  geom_line(group=1, color = "#000000", size=2)+
+  labs(y = "Total Taxable Value", x = "Year")+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())+
+  scale_y_continuous(breaks=c(20, 30, 40),
+                     labels=c("$20 M", "$30 M", "$40 M"))
+tax_value_ggp<-ggplotly(tax_value_gg, tooltip="text")%>%
+  style(hoverlabel = tax_value_label) %>%
+  layout(font = "NimbusSan")%>%
+  layout(annotations= tax_value_annotation)
+
 tax_rate_gg<-ggplot(data=buncombe_taxes, aes(year, buncombe_rate, text=paste0("<b>Tax Rate: </b>", buncombe_rate, "<br><b>Year: </b>", year)))+
-  geom_line(group=1, color = "#5086C3", size=2)+
+  geom_line(group=1, color = "#808080", size=2)+
   ylim(c(0,1))+
   labs(y = "Tax Rate per $100 assessed value", x = "Year")+
   theme(axis.text.x = element_text(angle = 90),
         panel.background = element_blank())
 tax_rate_ggp<-ggplotly(tax_rate_gg, tooltip="text")%>%
-  style(hoverlabel = label) %>%
+  style(hoverlabel = tax_rate_label) %>%
   layout(font = "NimbusSan")%>%
-  layout(annotations= tax_value_annotation)
+  layout(annotations= tax_rate_annotation)
 
 
 tax_collected_gg<-ggplot(data=buncombe_taxes, aes(year, tax_collected_m, text=paste0("<b>Property Tax Revenue: </b>", mycurrency_M(tax_collected_m), "<br><b>Year: </b>", year)))+
@@ -131,23 +180,32 @@ tax_collected_gg<-ggplot(data=buncombe_taxes, aes(year, tax_collected_m, text=pa
   scale_y_continuous(breaks=c(120, 160, 200),
                      labels=c("$120 M", "$160 M", "$200 M"))
 tax_collected_ggp<-ggplotly(tax_collected_gg, tooltip="text")%>%
-  style(hoverlabel = label) %>%
+  style(hoverlabel = tax_revenue_label) %>%
   layout(font = "NimbusSan") %>%
-  layout(annotations= tax_rate_annotation)
-
-
-tax_value_gg<-ggplot(data=buncombe_taxes, aes(year, taxable_value_b, text=paste0("<b>Total Taxable Value: </b>", mycurrency_B(taxable_value_b), "<br><b>Year: </b>", year)))+
-  geom_line(group=1, color = "#5086C3", size=2)+
-  labs(y = "Total Taxable Value", x = "Year")+
-  theme(axis.text.x = element_text(angle = 90),
-        panel.background = element_blank())+
-  scale_y_continuous(breaks=c(20, 30, 40),
-                     labels=c("$20 M", "$30 M", "$40 M"))
-tax_value_ggp<-ggplotly(tax_value_gg, tooltip="text")%>%
-  style(hoverlabel = label) %>%
-  layout(font = "NimbusSan")%>%
   layout(annotations= tax_revenue_annotation)
 
+subplot(list(tax_value_ggp, tax_rate_ggp, tax_collected_ggp), nrows=1, titleX = TRUE, titleY=TRUE,  margin = 0.07)
 
-subplot(list(tax_value_ggp, tax_rate_ggp, tax_collected_ggp), nrows=1, titleX = TRUE, titleY=TRUE)
 
+
+###############
+minicozzi<-appraisal_history2019_21%>%
+  group_by(PIN) %>%
+  arrange(year, .by_group=TRUE) %>% ##Arrange the data according to appraisal year, this is an important step for in order to calculate percent change
+  mutate(pct_change= ((totalvalue-lag(totalvalue))/lag(totalvalue)*100), ##Calculate percent change from the previous year. Here, the lag() function uses the preceding value. Important to arrange first!!
+         first_totval=head(totalvalue, 1), ##Adds a new column with the 2001 total taxable value, used as the baseline for the next percent change calculation
+         baselinechange=case_when(totalvalue!=first_totval~(totalvalue-first_totval)*100/first_totval, TRUE~1*NA),##Calculates percent change relative to the base year's total value
+         first_landval=head(landvalue, 1),
+         landbaselinechange=case_when(landvalue!=first_landval~(landvalue-first_landval)*100/first_landval, TRUE~1*NA))%>%
+  filter(PIN=='964902712000000')
+
+minicozzi_gg<-ggplot(data=minicozzi, aes(year, baselinechange, text=paste0("<b>Total Value: </b>", mycurrency(totalvalue), "<br><b>Percent Change: </b>", mypercent(baselinechange)))) +
+  geom_line(color="#5086C3", size=2, group=1)+
+  labs(y="Percent Change in Taxable Value", x="Year")+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())
+
+minicozzi_ggp<-ggplotly(minicozzi_gg, tooltip="text")%>%
+  style(hoverlabel = tax_revenue_label) %>%
+  layout(font = "NimbusSan")
+minicozzi_ggp
