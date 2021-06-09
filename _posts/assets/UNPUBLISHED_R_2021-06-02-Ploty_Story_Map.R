@@ -482,3 +482,138 @@ p <-sales_appraised%>%
   facet_grid(~ SALES_YEAR_1)+
   xlim(c(0,2000000))
 p
+
+
+################################################
+################################################
+
+buncombe_finances<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\storymap\\buncombe_finances.csv", header=TRUE)
+names(buncombe_finances)
+unique(buncombe_finances$RevenueType)
+buncombe_finances$RevenueType<-factor(buncombe_finances$RevenueType, levels=c("Local option sales taxes","Other taxes","Intergovernmental","Permits and fees","Charges for services","Investment earnings","Miscellaneous", "Ad valorem taxes"))
+
+
+
+county_finances_annotation_font <- list(
+  family = "Courier",
+  size = 20,
+  color = "white"
+)
+
+county_finances_label<- list(
+  font = "Courier"
+)
+
+county_finances_annotation <- list(
+  text = "<b>Buncombe County</b>",
+  font = tax_revenue_annotation_font,
+  bgcolor = "#001E60",
+  xref = "paper",
+  yref = "paper",
+  yanchor = "bottom",
+  xanchor = "center",
+  align = "center",
+  x = 0.5,
+  y = 1,
+  showarrow = FALSE
+)
+##County
+county_finances<-buncombe_finances%>%
+  filter(Location=="Buncombe")
+county_finances_gg<-ggplot(county_finances, aes(y=Percent, x=Location, fill=RevenueType, text=paste0(RevenueType, "<br>", mycurrency(Amount), " (", mypercent(Percent),")")))+
+  geom_bar(position = position_fill(reverse = TRUE), stat="identity")+
+  scale_fill_manual(values = c("#5086C3","#F4F4F5", "#A6AAA8", "#C2C2C3", "#9A9A9B", "#E0E0E1", "#545455", "#363637"))+
+  theme(panel.background = element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+ 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+county_finances_ggp<-ggplotly(county_finances_gg, tooltip="text")%>%
+  style(hoverlabel = county_finances_label,legendgroup = 'group1', showlegend=TRUE) %>%
+  layout(font = "NimbusSan") %>%
+  layout(annotations= county_finances_annotation)  
+county_finances_ggp
+
+##Asheville
+asheville_finances_annotation <- list(
+  text = "<b>Asheville</b>",
+  font = tax_revenue_annotation_font,
+  bgcolor = "#001E60",
+  xref = "paper",
+  yref = "paper",
+  yanchor = "bottom",
+  xanchor = "center",
+  align = "center",
+  x = 0.5,
+  y = 1,
+  showarrow = FALSE
+)
+asheville_finances<-buncombe_finances%>%
+  filter(Location=="Asheville")
+asheville_finances_gg<-ggplot(asheville_finances, aes(y=Percent, x=Location, fill=RevenueType, text=paste0(RevenueType, "<br>", mycurrency(Amount), " (", mypercent(Percent),")")))+
+  geom_bar(position = position_fill(reverse = TRUE), stat="identity")+
+  scale_fill_manual(values = c("#5086C3","#F4F4F5", "#A6AAA8", "#C2C2C3", "#9A9A9B", "#E0E0E1", "#545455", "#363637"))+
+  theme(panel.background = element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.title = element_blank())+ 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+asheville_finances_ggp<-ggplotly(asheville_finances_gg, tooltip="text")%>%
+  style(hoverlabel = county_finances_label,legendgroup = 'group1', showlegend=FALSE) %>%
+  layout(font = "NimbusSan") %>%
+  layout(annotations= asheville_finances_annotation)  
+asheville_finances_ggp
+
+##Black Mountain
+blackmtn_finances_annotation <- list(
+  text = "<b>Black Mountain</b>",
+  font = tax_revenue_annotation_font,
+  bgcolor = "#001E60",
+  xref = "paper",
+  yref = "paper",
+  yanchor = "bottom",
+  xanchor = "center",
+  align = "center",
+  x = 0.5,
+  y = 1,
+  showarrow = FALSE
+)
+blackmtn_finances<-buncombe_finances%>%
+  filter(Location=="Black Mountain")
+blackmtn_finances_gg<-ggplot(blackmtn_finances, aes(y=Percent, x=Location, fill=RevenueType, text=paste0(RevenueType, "<br>", mycurrency(Amount), " (", mypercent(Percent),")")))+
+  geom_bar(position = position_fill(reverse = TRUE), stat="identity")+
+  scale_fill_manual(values = c("#5086C3","#F4F4F5", "#A6AAA8", "#C2C2C3", "#9A9A9B", "#E0E0E1", "#545455", "#363637"))+
+  theme(panel.background = element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.title = element_blank())+ 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+blackmtn_finances_ggp<-ggplotly(blackmtn_finances_gg, tooltip="text")%>%
+  style(hoverlabel = county_finances_label,legendgroup = 'group1', showlegend=FALSE) %>%
+  layout(font = "NimbusSan") %>%
+  layout(annotations= blackmtn_finances_annotation)  
+blackmtn_finances_ggp
+
+subplot(list(blackmtn_finances_ggp, asheville_finances_ggp, county_finances_ggp), nrows=1, titleX = TRUE,  shareY=TRUE, margin = 0.07, widths=c(0.15,0.15,0.15))
+
+unique(buncombe_finances$Location)
+buncombe_finances$Location_f<-factor(buncombe_finances$Location, levels=c("Weaverville","Black Mountain","Asheville","Montreat","Woodfin","Biltmore Forest","Buncombe"))
+buncombe_finances_gg<-ggplot(buncombe_finances, aes(x = 1, y = Percent, fill = RevenueType, text=paste0(RevenueType, "<br>", mycurrency(Amount), " (", mypercent(Percent),")"))) +
+  geom_col(position = position_fill(reverse = TRUE)) +
+  scale_fill_manual(values = c("#5086C3","#F4F4F5", "#A6AAA8", "#C2C2C3", "#9A9A9B", "#E0E0E1", "#545455", "#363637"))+
+  facet_grid(. ~ Location_f)+
+  theme(strip.text = element_text(colour = 'white'))+
+  theme(panel.background = element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.title = element_blank(),
+        strip.background =element_rect(fill="#001E60"))+ 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+
+buncombe_finances_ggp<-ggplotly(buncombe_finances_gg, tooltip="text")%>%
+  style(hoverlabel = county_finances_label) %>%
+  layout(font = "NimbusSan")
+buncombe_finances_ggp
