@@ -260,8 +260,8 @@ appraisal_history2019_21_full_s<-appraisal_history2019_21_full_s%>%
 
 appraisal_history2019_21_full_s$Quintile<-as.factor(appraisal_history2019_21_full_s$Quintile)
 appraisal_history2019_21_full_s<-appraisal_history2019_21_full_s%>%
-  mutate(value_label=ifelse(Quintile==5, "High", ifelse(Quintile==4, "Moderately High", ifelse(Quintile==3, "Medium", ifelse(Quintile==2, "Moderately Low", "Low")))))
-
+  mutate(value_label=ifelse(Quintile==5, "Highest", ifelse(Quintile==4, "Moderately High", ifelse(Quintile==3, "Medium", ifelse(Quintile==2, "Moderately Low", "Lowest")))))
+appraisal_history2019_21_full_s$value_label<-factor(appraisal_history2019_21_full_s$value_label, levels=c("Lowest", "Moderately Low", "Medium", "Moderately High", "Highest"))
 
 #### Figure 5: Percent change in TOTAL taxable value from 2001-- comparisons across home value
 quintile_total_annotation_font <- list(
@@ -290,10 +290,10 @@ quintile_total_annotation <- list(
   showarrow = FALSE
 )
 quintile_total_gg<-ggplot(data=appraisal_history2019_21_full_s, aes(x=year, y=mean, group=Quintile, text=paste0("<b>Value: </b>", value_label, "<br><b>Percent Change: </b>", mypercent(mean), "<br><b>Year: </b>", year))) +
-  geom_line(aes(size=Quintile), color="#5086C3")+
+  geom_line(aes(size=value_label), color="#5086C3")+
   xlab("Year") + ylab("Avg. Percent Change in Taxable Value")+
   ylim(c(0,720))+
-  scale_size_manual(values = c(2,1.5,1,0.75,0.5), name = "Starting Value", labels=c("Lowest 20%","","","","Highest 20%"))+
+  scale_size_manual(values = c(2,1.5,1,0.75,0.5), name = "Starting Value")+
   theme(panel.background = element_blank(),
         legend.position = "none")
 
@@ -305,6 +305,7 @@ quintile_total_ggp<-ggplotly(quintile_total_gg, tooltip="text")%>%
 quintile_total_ggp
 
 #### Figure 6: Percent change in LAND value from 2001-- comparisons across home value
+
 quintile_land_annotation_font <- list(
   family = "Courier",
   size = 20,
@@ -331,13 +332,14 @@ quintile_land_annotation <- list(
   showarrow = FALSE
 )
 
+
 quintile_land_gg<-ggplot(data=appraisal_history2019_21_full_s, aes(x=year, y=meanland, group=Quintile, text=paste0("<b>Value: </b>", value_label, "<br><b>Percent Change: </b>", mypercent(meanland), "<br><b>Year: </b>", year))) +
-  geom_line(aes(size=Quintile), color="#001E60")+
+  geom_line(aes(size=value_label), color="#001E60")+
   xlab("Year") + ylab("Avg. Percent Change in Taxable Value")+
   ylim(c(0,720))+
-  scale_size_manual(values = c(2,1.5,1,0.75,0.5), name = "Starting Value", labels=c("Lowest 20%","","","","Highest 20%"))+
-  theme(panel.background = element_blank(),
-        legend.position = "top")
+  scale_size_manual(values = c(2,1.5,1,0.75,0.5), name = "Starting Value")+
+  theme(panel.background = element_blank())
+quintile_land_gg
 
 quintile_land_ggp<-ggplotly(quintile_land_gg, tooltip="text")%>%
   style(hoverlabel = quintile_land_label) %>%
