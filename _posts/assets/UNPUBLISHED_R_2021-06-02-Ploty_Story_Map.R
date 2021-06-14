@@ -1,27 +1,151 @@
-p <-sales_appraised%>%
-  filter(Class %in% c("RES","TOWNHOME","MULTIPLE R"," CONDO"))%>%
-  select(totalvalue, SellingPrice, SALES_YEAR_1)%>%
-  gather(Category, Value, totalvalue:SellingPrice)%>%
-  ggplot( aes(x=Value, fill=Category)) +
-  geom_histogram( color="#e9ecef", alpha=0.6, position='identity', bins=30) +
-  scale_fill_manual(values=c("#69b3a2", "#404080"))+
-  facet_grid(~ SALES_YEAR_1)+
-  xlim(c(0,2000000))
-p
+home_value_race<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\storymap\\home_value_by_race.csv", header=TRUE,encoding="UTF-8")
+names(home_value_race)
+home_value_race$Value<-factor(home_value_race$Value)
+home_value_race$Value<-fct_reorder(home_value_race$Value, home_value_race$Value.Order)
+home_value_race_gg<-ggplot(data = home_value_race, aes(x=Value, y=Percent, fill=Race)) +
+  geom_bar(stat="identity", position="dodge") 
 
-residential_sales_ratio_2013_2016<-residential_sales_ratio%>%
-  filter(SALES_YEAR_1>2012 & SALES_YEAR_1<2017)
+home_value_race_gg
 
-ggplot(data = residential_sales_ratio_2013_2016, aes(saleprice, sales_ratio)) +
-  geom_line(color = "steelblue", size = 0.5) +
-  geom_point(color="steelblue", size= 0.5) + 
-  labs(title = "Average Sales-to-Appraised-Value Ratios (SFR)",
-       subtitle = "2001 - 2021",
-       y = "Averages Sales : Value Ratio", x = "Selling Price") + 
++
+  labs(y = "Averages Sales : Value Ratio", x = "Selling Price") + 
   scale_x_continuous(labels=scales::dollar_format())+
-  facet_grid(~ SALES_YEAR_1)+
-  theme(axis.text.x = element_text(angle = 90))+ 
-  geom_line(aes(saleprice, median_year_ratio), color = "steelblue", size = 0.5)
+  ylim(0.8,1.1)+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())
+
+
+
+
+########################################################################
+########################################################################
+########################################################################
+names(residential_sales_ratio)
+residential_sales_ratio_2013<-residential_sales_ratio%>%
+  filter(SALES_YEAR_1==2013)
+jcurve_history_2013<-ggplot(data = residential_sales_ratio_2013, aes(saleprice, sales_ratio, text=paste0("<b>Mean Selling Price: </b>", mycurrency(saleprice), "<br><b>Mean Appraised Value: </b>", mycurrency(appraised_value), "<br><b> Sales Ratio: ", myratio(sales_ratio)))) +
+  geom_line(colour = "#5086C3", group=1, size= 2) +
+  geom_point(color="#5086C3", size= 2) + 
+  geom_hline(yintercept=1, color="#001E60")+
+  labs(y = "Averages Sales : Value Ratio", x = "Selling Price") + 
+  scale_x_continuous(labels=scales::dollar_format())+
+  ylim(0.8,1.1)+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())
+jcurve_history_2013_annotation <- list(
+  text = "<b>2013</b>",
+  bgcolor = "#001E60",
+  font = tax_value_annotation_font,
+  xref = "paper",
+  yref = "paper",
+  yanchor = "bottom",
+  xanchor = "center",
+  align = "center",
+  x = 0.5,
+  y = 1,
+  showarrow = FALSE
+)
+jcurve_history_2013_ggp<-ggplotly(jcurve_history_2013, tooltip="text")%>%
+  style(hoverlabel = jcurve_label) %>%
+  layout(font = "NimbusSan")%>%
+  layout(annotations= jcurve_history_2013_annotation)
+jcurve_history_2013_ggp
+
+residential_sales_ratio_2014<-residential_sales_ratio%>%
+  filter(SALES_YEAR_1==2014)
+jcurve_history_2014<-ggplot(data = residential_sales_ratio_2014, aes(saleprice, sales_ratio, text=paste0("<b>Mean Selling Price: </b>", mycurrency(saleprice), "<br><b>Mean Appraised Value: </b>", mycurrency(appraised_value), "<br><b> Sales Ratio: ", myratio(sales_ratio))), size = 0.5) +
+  geom_line(colour = "#5086C3", group=1, size= 2) +
+  geom_point(color="#5086C3", size= 2) +
+  geom_hline(yintercept=1, color="#001E60")+
+  labs(y = "Averages Sales : Value Ratio", x = "Selling Price") + 
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())
+jcurve_label<- list(
+  bgcolor = "#5086C3",
+  bordercolor = "transparent",
+  font = font
+)
+jcurve_history_2014_annotation <- list(
+  text = "<b>2014</b>",
+  bgcolor = "#001E60",
+  font = tax_value_annotation_font,
+  xref = "paper",
+  yref = "paper",
+  yanchor = "bottom",
+  xanchor = "center",
+  align = "center",
+  x = 0.5,
+  y = 1,
+  showarrow = FALSE
+)
+jcurve_history_2014_ggp<-ggplotly(jcurve_history_2014, tooltip="text")%>%
+  style(hoverlabel = jcurve_label) %>%
+  layout(font = "NimbusSan")%>%
+  layout(annotations= jcurve_history_2014_annotation)
+jcurve_history_2014_ggp
+
+
+residential_sales_ratio_2015<-residential_sales_ratio%>%
+  filter(SALES_YEAR_1==2015)
+jcurve_history_2015<-ggplot(data = residential_sales_ratio_2015, aes(saleprice, sales_ratio, text=paste0("<b>Mean Selling Price: </b>", mycurrency(saleprice), "<br><b>Mean Appraised Value: </b>", mycurrency(appraised_value), "<br><b> Sales Ratio: ", myratio(sales_ratio))), size = 0.5) +
+  geom_line(colour = "#5086C3", group=1, size= 2) +
+  geom_point(color="#5086C3", size= 2) + 
+  geom_hline(yintercept=1, color="#001E60")+ 
+  labs(y = "Averages Sales : Value Ratio", x = "Selling Price") + 
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())
+jcurve_history_2015_annotation <- list(
+  text = "<b>2015</b>",
+  bgcolor = "#001E60",
+  font = tax_value_annotation_font,
+  xref = "paper",
+  yref = "paper",
+  yanchor = "bottom",
+  xanchor = "center",
+  align = "center",
+  x = 0.5,
+  y = 1,
+  showarrow = FALSE
+)
+jcurve_history_2015_ggp<-ggplotly(jcurve_history_2015, tooltip="text")%>%
+  style(hoverlabel = jcurve_label) %>%
+  layout(font = "NimbusSan")%>%
+  layout(annotations= jcurve_history_2015_annotation)
+jcurve_history_2015_ggp
+
+residential_sales_ratio_2016<-residential_sales_ratio%>%
+  filter(SALES_YEAR_1==2016)
+jcurve_history_2016<-ggplot(data = residential_sales_ratio_2016, aes(saleprice, sales_ratio, text=paste0("<b>Mean Selling Price: </b>", mycurrency(saleprice), "<br><b>Mean Appraised Value: </b>", mycurrency(appraised_value), "<br><b> Sales Ratio: ", myratio(sales_ratio))), size = 0.5) +
+  geom_line(colour = "#5086C3", group=1, size= 2) +
+  geom_point(color="#5086C3", size= 2) + 
+  geom_hline(yintercept=1, color="#001E60")+
+  labs(y = "Averages Sales : Value Ratio", x = "Selling Price") + 
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(axis.text.x = element_text(angle = 90),
+        panel.background = element_blank())
+jcurve_history_2016_annotation <- list(
+  text = "<b>2016</b>",
+  bgcolor = "#001E60",
+  font = tax_value_annotation_font,
+  xref = "paper",
+  yref = "paper",
+  yanchor = "bottom",
+  xanchor = "center",
+  align = "center",
+  x = 0.5,
+  y = 1,
+  showarrow = FALSE
+)
+jcurve_history_2016_ggp<-ggplotly(jcurve_history_2016, tooltip="text")%>%
+  style(hoverlabel = jcurve_label) %>%
+  layout(font = "NimbusSan")%>%
+  layout(annotations= jcurve_history_2016_annotation)
+jcurve_history_2016_ggp
+
+jcurve_history_2014_2017<-subplot(jcurve_history_2013_ggp, jcurve_history_2014_ggp,jcurve_history_2015_ggp,jcurve_history_2016_ggp, shareY=TRUE, shareX=TRUE, nrows=1)
+jcurve_history_2014_2017
 
 year<-c(2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020)
 buncombe_rate<-c(0.630,0.590,0.590,0.590,0.590,0.530,0.525,0.525,0.525,0.525,0.525,0.525,0.604,0.604,0.604,0.539,0.529,0.529,0.529)
@@ -58,6 +182,10 @@ mycurrency_M <- function(x){
 
 mycurrency_B <- function(x){
   return(paste("$", formatC(as.numeric(x), format="f", digits=0, big.mark=","),"B"))
+}
+
+myratio <- function(x){
+  return(paste(formatC(as.numeric(x), format="f", digits=2, big.mark=",")))
 }
 
 font <- list(
