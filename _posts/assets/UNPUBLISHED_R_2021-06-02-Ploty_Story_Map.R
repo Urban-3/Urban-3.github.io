@@ -2,20 +2,21 @@ home_value_race<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\storymap\\home
 names(home_value_race)
 home_value_race$Value<-factor(home_value_race$Value)
 home_value_race$Value<-fct_reorder(home_value_race$Value, home_value_race$Value.Order)
-home_value_race_gg<-ggplot(data = home_value_race, aes(x=Value, y=Percent, fill=Race)) +
-  geom_bar(stat="identity", position="dodge") 
-
-home_value_race_gg
-
-+
-  labs(y = "Averages Sales : Value Ratio", x = "Selling Price") + 
-  scale_x_continuous(labels=scales::dollar_format())+
-  ylim(0.8,1.1)+
+home_value_race_gg<-ggplot(data = home_value_race, aes(x=Value, y=Percent, fill=Race, text=paste0("<b>Home Value: </b>", Value, "<br><b>Ownership: </b>", mypercent(Percent)))) +
+  geom_bar(stat="identity", position="dodge")+
   theme(axis.text.x = element_text(angle = 90),
-        panel.background = element_blank())
+        panel.background = element_blank())+
+  scale_fill_manual("Race", values = c("Black or African American" = "#7DC242", "White" = "#80AEDD"))
 
+home_value_race_label<- list(
+  bordercolor = "transparent",
+  font = font
+)
 
-
+home_value_race_ggp<-ggplotly(home_value_race_gg, tooltip="text")%>%
+  style(hoverlabel = home_value_race_label) %>%
+  layout(font = "NimbusSan")
+home_value_race_ggp
 
 ########################################################################
 ########################################################################
@@ -174,6 +175,10 @@ mycurrency <- function(x){
 
 mypercent <- function(x){
   return(paste(formatC(as.numeric(x), format="f", digits=0, big.mark=","),"%"))
+}
+
+mypercent_1 <- function(x){
+  return(paste(formatC(as.numeric(x), format="f", digits=1, big.mark=","),"%"))
 }
 
 mycurrency_M <- function(x){
@@ -533,6 +538,51 @@ sales_data_table_year$PIN_YEAR=paste(sales_data_table_year$PIN, sales_data_table
 
 sales_appraised<-merge(appraisal_history2019_abbr, sales_data_table_year, by="PIN_YEAR")
 sales_appraised$sales_ratio<-sales_appraised$totalvalue/sales_appraised$SellingPrice
+snapshot2019<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\Buncombe_County_Parcel_Snapshot_from_2019-shp\\Buncombe_County_Parcel_Snapshot_from_2019.csv", header=TRUE)
+names(snapshot2019)
+snapshot2019_s<-snapshot2019%>%
+  select(PIN,NeighborhoodCode)
+
+sales_appraised_wngh<-merge(sales_appraised, snapshot2019_s, by.x="PIN.x", by.y="PIN")
+tax_district_race<-read.csv("D:\\Urban3\\Projects\\NC\\buncombe_co\\analyzed_data\\r_output\\tax_district_race.csv", header=TRUE)
+
+sales_appraised_wngh$index<-1
+residential_sales_ratio_wngh<-sales_appraised_wngh%>%
+  filter(Class %in% c("RES","TOWNHOME","MULTIPLE R"," CONDO"))%>%
+  group_by(NeighborhoodCode)%>%
+  summarise(mean_ratio=mean(sales_ratio),
+         median_ratio=median(sales_ratio),
+         mean_selling_price=mean(SellingPrice),
+         median_selling_price=median(SellingPrice),
+         mean_total_value=mean(totalvalue),
+         median_total_value=median(totalvalue),
+         count=sum(index))%>%
+  filter(count>20)
+
+ggplot(data = residential_sales_ratio_wngh, aes(mean_selling_price, mean_ratio)) +
+  geom_point(color="steelblue", size= 0.5) + 
+  geom_smooth(method=lm)+
+  labs(title = "Average Sales-to-Appraised-Value Ratios (SFR)",
+       subtitle = "2001 - 2021",
+       y = "Averages Sales : Value Ratio", x = "Selling Price") + 
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(axis.text.x = element_text(angle = 90))  
+
+sales_appraised_wngh_race<-merge(residential_sales_ratio_wngh, tax_district_race, by.x="NeighborhoodCode", by.y="Neighborho")
+
+ggplot(data = sales_appraised_wngh_race, aes(PERC_BLACK, mean_ratio)) +
+  geom_point(color="steelblue", size= 0.5) + 
+  geom_smooth(method=lm)+
+  labs(title = "Average Sales-to-Appraised-Value Ratios (SFR)",
+       subtitle = "2001 - 2021",
+       y = "Averages Sales : Value Ratio", x = "Selling Price") + 
+  theme(axis.text.x = element_text(angle = 90))  
+
+filter(NeighborhoodCode %in% neighborhoods)
+
+
+
+
 
 residential_sales_ratio<-sales_appraised%>%
   filter(Class %in% c("RES","TOWNHOME","MULTIPLE R"," CONDO"))%>%
@@ -653,3 +703,46 @@ buncombe_finances_ggp<-ggplotly(buncombe_finances_gg, tooltip="text")%>%
   style(hoverlabel = county_finances_label) %>%
   layout(font = "NimbusSan")
 buncombe_finances_ggp
+
+################################################################################################
+################################################################################################
+
+neighborhoods<-c("R4GB", "R3GB", "BMFE", "BMFI", "R4FC","BHDA", "ASHC")
+names(appraisal_history2019_21_full_wneigh)
+appraisal_history2019_21_full_wneigh_s<-appraisal_history2019_21_full_wneigh%>%
+  group_by(PIN_join) %>%
+  arrange(year, .by_group=TRUE) %>%
+  mutate(pct_change= ((totalvalue-lag(totalvalue))/lag(totalvalue)*100), ##Calculate percent change from the previous year. Here, the lag() function uses the preceding value. Important to arrange first!!
+         first_totval=head(totalvalue, 1), ##Adds a new column with the 2001 total taxable value, used as the baseline for the next percent change calculation
+         baselinechange=case_when(totalvalue!=first_totval~(totalvalue-first_totval)*100/first_totval, TRUE~1*NA),##Calculates percent change relative to the base year's total value
+         first_landval=head(landvalue, 1), ##Do the same for land value
+         landbaselinechange=case_when(landvalue!=first_landval~(landvalue-first_landval)*100/first_landval, TRUE~1*NA))%>% 
+  ungroup()%>%
+  filter(year!=2001)%>%
+  group_by(Neighborho, year)%>%
+  filter(Neighborho %in% neighborhoods)%>%
+  summarise(mean=mean(baselinechange, na.rm=TRUE),
+            meanval=mean(totalvalue),
+            meanland=mean(landbaselinechange, na.rm=TRUE))
+
+
+#### Figure 10: Change in Total taxable value-- comparisons between neighborhoods 
+ggplot(data=appraisal_history2019_21_full_wneigh_s, aes(x=year, y=meanval, group=Neighborho)) +
+  geom_line(aes(color=Neighborho))+
+  xlab("Year") + ylab("Avg. Change in Total Taxable Value")+
+  scale_color_discrete(name = "Neighborhood")+
+  scale_y_continuous(labels=scales::dollar_format())
+
+
+#### Figure 11: Percent change in TOTAL taxable value from 2001-- comparisons between neighborhoods 
+ggplot(data=appraisal_history2019_21_full_wneigh_s, aes(x=year, y=mean, group=Neighborho)) +
+  geom_line(aes(color=Neighborho))+
+  xlab("Year") + ylab("Avg. Percent Change in Total Taxable Value")+
+  scale_color_discrete(name = "Neighborhood")
+
+
+#### Figure 12: Percent change in LAND value from 2001-- comparisons between neighborhoods
+ggplot(data=appraisal_history2019_21_full_wneigh_s, aes(x=year, y=meanland, group=Neighborho)) +
+  geom_line(aes(color=Neighborho))+
+  xlab("Year") + ylab("Avg. Percent Change in Land Value")+
+  scale_color_discrete(name = "City")
