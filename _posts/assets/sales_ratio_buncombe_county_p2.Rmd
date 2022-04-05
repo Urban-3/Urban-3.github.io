@@ -1,0 +1,67 @@
+---
+title: "Urban3 Sales Ratio Study Part II"
+author: "Ori Baber, PhD"
+date: "4/5/2022"
+output: html_document
+---
+
+## Plot Sales Locations
+```{r sales loc, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+sales_loc<-buncombe_sales_assessed%>%
+  filter(lon_wgs != 0)%>%
+  filter(lat_wgs != 0)
+
+sales_loc_sf = st_as_sf(sales_loc, coords = c("lon_wgs","lat_wgs"), remove = FALSE)
+sales_loc_sf_reproj<-st_set_crs(sales_loc_sf, st_crs(4326))
+
+sales_loc_gg<-ggplot() +
+  geom_sf(data=county_boundary_reproj, fill="#A6AAA8")+
+  geom_sf(data=county_area_water_reproj, fill="#5086C3", color="#5086C3")+
+  geom_sf(data=sales_loc_sf_reproj, size = 0.5)+
+  theme_void()
+```
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/sales_location_all.png)
+
+## Retrieve Census Data
+```{r census, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+##2020 Census Blocks Groups
+ja_census2020_blockgroups <- get_decennial(
+    geography = "block group",
+    variables = dc2020_vars,
+    state = state,
+    county = county,
+    year = 2020,
+    geometry = TRUE,
+    output = "wide") %>%
+  mutate(ja_dc20001=P2_005N, ##white
+         ja_dc20002=P2_006N, ##black
+         ja_dc20003=P2_008N, ##asian
+         ja_dc20004=P2_002N, ##hispanic
+         ja_dc20005=P2_007N+P2_009N+P2_010N+P2_011N,##other
+         ja_dc20006=100*(P2_005N/P2_001N), ##percent white
+         ja_dc20007=100*(P2_006N/P2_001N), ##percent black
+         ja_dc20008=100*(P2_008N/P2_001N), ##percent asian
+         ja_dc20009=100*(P2_002N/P2_001N), ##percent hispanic
+         ja_dc20010=100*(ja_dc20005/P2_001N))
+
+sales_loc_bg_gg<-ggplot() +
+  geom_sf(data=ja_census2020_blockgroups, fill="#A6AAA8")+
+  geom_sf(data=county_area_water_reproj, fill="#5086C3", color="#5086C3")+
+  theme_void() 
+```
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/sales_loc_bg.png)
+
+## Join Census Data and Sales Location
+```{r census2, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+sales_loc_race_gg<-ggplot() +
+  geom_sf(data=ja_census2020_blockgroups, aes(fill=ja_dc20007))+
+  geom_sf(data=county_area_water_reproj, fill="#5086C3", color="#5086C3")+
+  theme_void()+
+  scale_fill_viridis()+ 
+  labs(fill="Percent Black or African American")+ 
+  theme(legend.position = "top")
+```
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/sales_loc_race.png)
+
+
+
