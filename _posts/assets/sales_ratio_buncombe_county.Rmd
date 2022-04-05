@@ -1,6 +1,6 @@
 ---
-title: "sales_ratio_buncombe_county"
-author: "Ori Baber"
+title: "Urban3 Sales Ratio Study"
+author: "Ori Baber, PhD"
 date: "4/5/2022"
 output: html_document
 ---
