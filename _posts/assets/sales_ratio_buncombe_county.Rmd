@@ -1,0 +1,63 @@
+---
+title: "sales_ratio_buncombe_county"
+author: "Ori Baber"
+date: "4/5/2022"
+output: html_document
+---
+
+## Assessment Sample Selection
+
+### Data Source
+```{r, sales data, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+parcel_snapshot_2015<-st_read("https://services.arcgis.com/aJ16ENn1AaqdFlqx/arcgis/rest/services/BC_Property_Snap_Shot/FeatureServer/14/query?outFields=*&where=1%3D1&f=geojson")
+```
+### Reporting Groups
+The following residential land use class codes are used in the sales ratio analysis:
+
+**Single-Family**
+
+  * 100: Residential 0-3 Acres
+  * 101: Residential Greater than 3 Acres
+  * 170: Manufactured Home Site
+
+**Townhome**
+
+  * 121: Townhome
+  
+**Multi-Family**
+  
+  * 180: Multi-family Residential
+  
+**Residential Condominiums**
+  
+  * 120: Condominiums
+  
+**Note**: For additional property class codes, see: https://data.buncombecounty.org/datasets/bunco::buncombe-county-parcel-class-codes/about
+  
+## Sales Selection
+
+### Data Source
+Sales data were retrieved from Buncombe County's Open Data Explorer using the following API query: 
+
+```{r, assessment data, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+buncombe_sales<-st_read("https://opendata.arcgis.com/datasets/29d510b5e7164774a7d315bb7e8fae35_0.geojson")
+```
+
+### Outlier Trimming
+
+#### Limit Sale Amounts
+Sales with amounts less than $10,000 are excluded from sales ratio studies.
+
+#### Unusually Large or Small Ratios
+The top and bottom 5% of sales in terms of sales ratios are excluded from sales ratio studies.
+
+#### Vacant Land
+Transactions representing the sale of vacant residential land are exclued from sales ratio studies. 
+
+## Definitions
+
+**True Value:** Market value, that is, the price estimated in terms of money at which the property would change hands between a willing and financially able buyer and a willing seller, neither being under any compulsion to buy or to sell and both having reasonable knowledge of all the uses to which the property is adapted and for which it is capable of being used (NC G.S. 105-283)
+
+**Sales Ratio:** The ratio of the assessor's estimated Fair Cash Value in year t to that property's sale price in period t±zt:
+
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/sales_ratio_equation.png)
