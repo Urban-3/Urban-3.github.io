@@ -1,0 +1,235 @@
+---
+title: "Urban3 Sales Ratio Study"
+author: "Ori Baber, PhD"
+date: "4/4/2022"
+output: html_document
+---
+
+## Assessment Sample Selection
+
+### Data Source
+```{r, sales data, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+parcel_snapshot_2015<-st_read("https://services.arcgis.com/aJ16ENn1AaqdFlqx/arcgis/rest/services/BC_Property_Snap_Shot/FeatureServer/14/query?outFields=*&where=1%3D1&f=geojson")
+```
+### Reporting Groups
+The following residential land use class codes are used in the sales ratio analysis:
+
+**Single-Family**
+
+  * 100: Residential 0-3 Acres
+  * 101: Residential Greater than 3 Acres
+  * 170: Manufactured Home Site
+
+**Townhome**
+
+  * 121: Townhome
+  
+**Multi-Family**
+  
+  * 180: Multi-family Residential
+  
+**Residential Condominiums**
+  
+  * 120: Condominiums
+  
+**Note**: For additional property class codes, see: https://data.buncombecounty.org/datasets/bunco::buncombe-county-parcel-class-codes/about
+  
+## Sales Selection
+
+### Data Source
+Sales data were retrieved from Buncombe County's Open Data Explorer using the following API query: 
+
+```{r, assessment data, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+buncombe_sales<-st_read("https://opendata.arcgis.com/datasets/29d510b5e7164774a7d315bb7e8fae35_0.geojson")
+```
+
+### Outlier Trimming
+
+#### Limit Sale Amounts
+Sales with amounts less than $10,000 are excluded from sales ratio studies.
+
+#### Unusually Large or Small Ratios
+The top and bottom 5% of sales in terms of sales ratios are excluded from sales ratio studies.
+
+#### Vacant Land
+Transactions representing the sale of vacant residential land are exclued from sales ratio studies. 
+
+## Definitions
+
+**True Value:** Market value, that is, the price estimated in terms of money at which the property would change hands between a willing and financially able buyer and a willing seller, neither being under any compulsion to buy or to sell and both having reasonable knowledge of all the uses to which the property is adapted and for which it is capable of being used (NC G.S. 105-283)
+
+**Sales Ratio:** The ratio of the assessor's estimated Fair Cash Value in year t to that property's sale price in period t±zt:
+
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/sales_ratio_equation.png)
+
+The value of z is governed by this standard (See 3.3.2.1 and 3.3.2.2).
+
+**Sales Ratio Study:** A statistical analysis to evaluate the quality of assessments with respect to accuracy, uniformity, and vertical equity.
+
+**Residential Property:** A property valued solely on the market valuation standard that is used, or intended to be used, for a residential purposes, and includes:
+  + Residential condominiums;
+
+**Arm's Length:** Of or relating to dealings between two parties who are not related or not on close terms and who are presumed to have roughly equal bargaining power; not involving a confidential relationship.
+
+**Bootstrapped Standard Deviation:** The standard deviation of 100 or more calculations of the same statistic, with each calculation based on a random sample of the overall population.
+
+**95% Confidence Interval:** The range in which it is likely that an unknown parameter lies given an observed sample distribution. The confidence interval is given by the mean of the sample statistic plus and minus the product of the z-score (1.96) and the ratio of the standard deviation or bootstrapped standard deviation to the square root of the sample size:
+
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/ci_equation.png)
+
+**Sales Chasing:** 'Sales Chasing,' also known as 'Selective Appraisal,' is the practice of changing a property's assessed value in response to a recent sale.
+
+**Coefficient of Dispersion (COD):** COD is a measure of horizontal equity and uniformity. The COD is the average percentage deviation of ratios from the median ratio. It is calculated as the ratio of the Average Absolute Deviation from the Median Sales Ratio to the Median Sales Ratio:
+
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/cod_equation.png)
+
+**Price Related Differential (PRD):** PRD is a statistical measure of vertical equity in assessment. It is the mean prediction ratio divided by the sale-price weighted mean prediction ratio.
+
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/prd_equation.png)
+
+**Price Related Bias (PRB):** PRB is a statistical measure of vertical equity. The statistic is obtained by running a linear regression:
+
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/prb_equation.png)
+
+## Standards for High Quality Assessment
+
+Assessments within a strata are considered 'high quality' if they fall within the defined ranges below.
+
+Statistic           | Acceptable Range
+:-------------:       | :-------------:
+COD                 | 5 - 15
+PRD                 | .98 - 1.03
+PRB                 | -.05 - .05
+Median Sales Ratio  | .95 - 1.05
+
+## Full R Code For Sales Data
+```{r, sales data full, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+## Retrieve sales records via open data API
+buncombe_sales<-st_read("https://opendata.arcgis.com/datasets/29d510b5e7164774a7d315bb7e8fae35_0.geojson")
+
+## Apply selection criteria                                               
+buncombe_sales_s<-as.data.frame(buncombe_sales)%>%
+  mutate(PIN=gsub("-", "", PINN), ##Standardize parcel identification 
+         PIN=sub("^0+", "", PIN),
+         PIN=sub("0+$", "", PIN),
+         TaxYear=as.numeric(as.character(str_sub(buncombe_sales$SellDate, 1,4))))%>%
+  filter(TaxYear>=2002)%>%
+  filter(VacantLot=='False')%>%
+  filter(SellingPrice>10000)%>%
+  filter(Class %in% c("RES 0-3 AC", "RES >3 ACR", "MFG HOME S", "MULTIPLE R", "TOWNHOME", "CONDO"))%>%
+  select("PIN", "TaxYear", "SellingPrice", "AdjustedSalePrice", "QualifiedSale")
+```
+
+## Full R Code For Assessment Data
+```{r, assessment data full, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+
+## Retrieve assessment snapshots via open data API
+parcel_snapshot_2016<-st_read("https://services.arcgis.com/aJ16ENn1AaqdFlqx/arcgis/rest/services/BC_Property_Snap_Shot/FeatureServer/15/query?outFields=*&where=1%3D1&f=geojson")
+
+## Apply selection criteria
+parcel_snapshot_2016_s<-parcel_snapshot_2016%>%
+  st_transform(st_crs(4326))%>%
+  filter(!st_is_empty(parcel_snapshot_2016))%>%
+  filter(class %in% c("100", "101", "170", "121", "180", "120"))%>%
+  mutate(PIN=sub("^0+", "", pinnum),
+         TaxYear=as.numeric(2016))%>%
+  select("PIN", "TaxYear", "class", "totalmarketvalue","appraisedvalue","taxvalue","neighborhoodcode")
+```
+
+## Full R Code For Sales Ratio 
+```{r, sales ratio full, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+## Join sales records and assessment data by unique parcel identification number and tax year
+buncombe_sales_assessed<-merge(buncombe_sales_s, parcel_snapshot_2002_2018, by=c("PIN", "TaxYear"))
+
+## Apply selection criteria and calculate sales ratio
+buncombe_sales_assessed_s1<-buncombe_sales_assessed%>%
+  filter(QualifiedSale == "Y")%>%
+  filter(TaxYear>2010)%>%
+  filter(taxvalue>10000)%>%
+  mutate(sales_ratio=as.numeric(taxvalue)/as.numeric(SellingPrice))%>%
+  mutate(selldecile = ntile(SellingPrice, 10),
+         median_sales_ratio=median(sales_ratio))%>%
+  group_by(selldecile)%>%
+  summarise(saleprice = median(SellingPrice),
+            sales_ratio=median(sales_ratio),
+            count=sum(n()),
+            median_sales_ratio=first(median_sales_ratio))
+
+median_sales_ratio_s1<-buncombe_sales_assessed_s1[1,]$median_sales_ratio
+
+## Chart  
+buncombe_sales_assessed_s1_gg<-ggplot(data=buncombe_sales_assessed_s1, aes(x=saleprice, y=sales_ratio)) +
+  geom_line()+
+  geom_point(size=2, shape=23)+ 
+  scale_x_continuous(labels=scales::dollar_format())+
+  geom_hline(yintercept=median_sales_ratio_s1, linetype="dashed", color = "red")+ 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+ 
+  xlab("Median Sales Price")+
+  ylab("Median Sales Ratio")
+buncombe_sales_assessed_s1_gg
+
+```
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/full_sales_ratio.png)
+
+## Sales Ratio by Year
+```{r, sales ratio by year, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+buncombe_sales_assessed_s2<-buncombe_sales_assessed%>%
+  filter(QualifiedSale == "Y")%>%
+  filter(TaxYear>2010)%>%
+  filter(taxvalue>10000)%>%
+  mutate(sales_ratio=as.numeric(taxvalue)/as.numeric(SellingPrice))%>%
+  group_by(TaxYear)%>%
+  mutate(selldecile = ntile(SellingPrice, 10),
+         median_sales_ratio=median(sales_ratio))%>%
+  group_by(selldecile, TaxYear)%>%
+  summarise(saleprice = median(SellingPrice),
+            sales_ratio=median(sales_ratio),
+            count=sum(n()),
+            median_sales_ratio=first(median_sales_ratio))
+
+buncombe_sales_assessed_s2_gg<-ggplot(data=buncombe_sales_assessed_s2, aes(x=saleprice, y=sales_ratio)) +
+  geom_line()+
+  geom_point(size=2, shape=23)+ 
+  scale_x_continuous(labels=scales::dollar_format())+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  geom_hline(yintercept=1.05, linetype="dashed", color = "red")+ 
+  geom_hline(yintercept=0.95, linetype="dashed", color = "red")+ 
+  geom_hline(yintercept=1, linetype="solid", color = "red")+
+  facet_grid(~TaxYear)+
+  xlab("Median Sales Price")+
+  ylab("Median Sales Ratio")
+  
+buncombe_sales_assessed_s2_gg
+```
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/sales_ratio_byyear.png)
+
+
+## Sales Ratio by Residential Land Use and Year
+```{r, sales ratio by class and year, eval=FALSE, echo=TRUE, results=FALSE, warning=FALSE}
+buncombe_sales_assessed_s3<-buncombe_sales_assessed%>%
+  filter(QualifiedSale == "Y")%>%
+  filter(TaxYear>2010)%>%
+  filter(taxvalue>10000)%>%
+  mutate(sales_ratio=as.numeric(taxvalue)/as.numeric(SellingPrice))%>%
+  group_by(TaxYear, Class)%>%
+  mutate(selldecile = ntile(SellingPrice, 10))%>%
+  group_by(TaxYear, selldecile, Class) %>%
+  summarise(saleprice = median(SellingPrice),
+            sales_ratio=median(sales_ratio),
+            count=sum(n()))
+
+buncombe_sales_assessed_s3_gg<-buncombe_sales_assessed_s3%>%
+  filter(Class %in% c(100, 170))%>%
+  filter(TaxYear<2018)%>%
+  ggplot(aes(x=selldecile, y=sales_ratio)) +
+  facet_grid(Class~TaxYear, scales="free")+
+  geom_line()+
+  geom_point(size=2, shape=23)+ 
+  geom_hline(yintercept=1, linetype="solid", color = "red")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  xlab("Median Sales Price")+
+  ylab("Median Sales Ratio")
+
+buncombe_sales_assessed_s3_gg
+```
+![](C:/Users/ori/Documents/Just_Accounting/images/markdown/sales_ratio_byclass.png)
